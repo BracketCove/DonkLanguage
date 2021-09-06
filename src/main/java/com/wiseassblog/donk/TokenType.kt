@@ -1,9 +1,17 @@
 package com.wiseassblog.donk
 
+
+/**
+ *                          Scanner/Lexer/Tokenizer -> Parser ->
+ * Source code (String) ->  List<Tokens>            -> Abstract Syntax Tree (AST)
+ *
+ *
+ */
 enum class TokenType {
     //Single tokens
     LEFT_PAREN, RIGHT_PAREN, LEFT_BRACE, RIGHT_BRACE,
     COMMA, MINUS, PLUS, SEMICOLON, SLASH, ASTERISK,
+    COLON,
 
     //Single or double
     EXCLM, EXCLM_EQUAL,
@@ -12,7 +20,10 @@ enum class TokenType {
     LESS, LESS_EQUAL,
 
     //Literals
-    IDENTIFIER, STRING, NUMBER,
+    IDENTIFIER, LITERAL_STRING, LITERAL_NUMBER,
+
+    //Types
+    TYPE_STRING, TYPE_DOUBLE, TYPE_BOOLEAN,
 
     //Keywords
     AND, ELSE, FALSE, FOR, IF, INSTR, NULL, OR,

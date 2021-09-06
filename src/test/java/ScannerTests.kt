@@ -36,7 +36,7 @@ class ScannerTests {
 
         val fourth = DonkToken(
             "128",
-            TokenType.NUMBER,
+            TokenType.LITERAL_NUMBER,
             128.0,
             1
         )
@@ -52,8 +52,10 @@ class ScannerTests {
 
         val result = scanner.getTokens(testOne)
 
-        assert(result is ScannerResult.Success
-                && result.tokens.containsAll(expectedResult))
+        assert(
+            result is ScannerResult.Success
+                    && result.tokens.containsAll(expectedResult)
+        )
     }
 
     @Test
@@ -83,7 +85,7 @@ class ScannerTests {
 
         val fourth = DonkToken(
             "128",
-            TokenType.STRING,
+            TokenType.LITERAL_STRING,
             "128",
             1
         )
@@ -99,8 +101,10 @@ class ScannerTests {
 
         val result = scanner.getTokens(testOne)
 
-        assert(result is ScannerResult.Success
-                && result.tokens.containsAll(expectedResult))
+        assert(
+            result is ScannerResult.Success
+                    && result.tokens.containsAll(expectedResult)
+        )
     }
 
 
@@ -115,7 +119,7 @@ class ScannerTests {
 
     @Test
     fun testSingleTokens() {
-        val testOne = "({,-+;/*})"
+        val testOne = "({,-+;/*}):"
 
         val lp = DonkToken(
             "(",
@@ -187,9 +191,16 @@ class ScannerTests {
             1
         )
 
-        val expectedResult = listOf(
-            lp, lb, co, mi, pl, se, sl, ast, rb, rp
+        val cl = DonkToken(
+            ":",
+            TokenType.COLON,
+            Unit,
+            1
+        )
 
+
+        val expectedResult = listOf(
+            lp, lb, co, mi, pl, se, sl, ast, rb, rp, cl
         )
 
         val result = scanner.getTokens(testOne)
@@ -227,7 +238,7 @@ class ScannerTests {
 
         val number = DonkToken(
             "1234567.0",
-            TokenType.NUMBER,
+            TokenType.LITERAL_NUMBER,
             1234567.0,
             1
         )
@@ -251,7 +262,7 @@ class ScannerTests {
 
         val string = DonkToken(
             expectedResultString,
-            TokenType.STRING,
+            TokenType.LITERAL_STRING,
             expectedResultString,
             1
         )
@@ -444,14 +455,14 @@ class ScannerTests {
         )
 
         val sixth = DonkToken(
-            "instr" ,
+            "instr",
             TokenType.INSTR,
             Unit,
             1
         )
 
         val seventh = DonkToken(
-            "null" ,
+            "null",
             TokenType.NULL,
             Unit,
             1
@@ -521,4 +532,34 @@ class ScannerTests {
         )
 
     }
+
+    @Test
+    fun testTypesInput() {
+        val source = "String Double Boolean "
+
+        val t1 = DonkToken(
+            "String",
+            TokenType.TYPE_STRING
+        )
+
+        val t2 = DonkToken(
+            "Double",
+            TokenType.TYPE_DOUBLE
+        )
+
+        val t3 = DonkToken(
+            "Boolean",
+            TokenType.TYPE_BOOLEAN
+        )
+
+        val expected = listOf(t1, t2, t3)
+        val result = scanner.getTokens(source)
+
+        assert(
+            result is ScannerResult.Success &&
+                    result.tokens.containsAll(expected)
+        )
+    }
+
+
 }

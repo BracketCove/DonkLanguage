@@ -2,6 +2,7 @@ package com.wiseassblog.donk.scanner
 
 import com.wiseassblog.donk.DonkToken
 import com.wiseassblog.donk.TokenType
+import com.wiseassblog.donk.common.isAtEnd
 
 /**
  *
@@ -67,9 +68,9 @@ class DonkHandWrittenScanner() : IScanner {
             char.isWhitespace() -> return Triple(start, current + 1, DonkToken(char.toString(), TokenType.SKIP))
         }
 
-        //keywords
+        //keywords and Types
         when {
-            listOf('a', 'e', 'f', 'n', 'o', 'r', 's', 't', 'w', 'i', 'v').contains(char) -> {
+            listOf('a', 'e', 'f', 'n', 'o', 'r', 's', 't', 'w', 'i', 'v', 'S', 'D', 'B').contains(char) -> {
                 val scanKeyword = matchKeyword(current, source)
                 if (scanKeyword.second.type != TokenType.SKIP)
                     return Triple(start, current + scanKeyword.first, scanKeyword.second)
@@ -108,6 +109,7 @@ class DonkHandWrittenScanner() : IScanner {
             '-' -> Triple(start, current + 1, DonkToken(char.toString(), TokenType.MINUS))
             '+' -> Triple(start, current + 1, DonkToken(char.toString(), TokenType.PLUS))
             ';' -> Triple(start, current + 1, DonkToken(char.toString(), TokenType.SEMICOLON))
+            ':' -> Triple(start, current + 1, DonkToken(char.toString(), TokenType.COLON))
             '*' -> Triple(start, current + 1, DonkToken(char.toString(), TokenType.ASTERISK))
             '/' -> {
                 //returns the offset of the consumed token, and the consumed token
@@ -266,6 +268,27 @@ class DonkHandWrittenScanner() : IScanner {
                 if (substring == "var ")
                     return Pair(offset, DonkToken(substring.trim(), TokenType.VAR))
             }
+            'S' -> {
+                //String
+                val offset = 7
+                var substring = source.substring(index, index + offset)
+                if (substring == "String ")
+                    return Pair(offset, DonkToken(substring.trim(), TokenType.TYPE_STRING))
+            }
+            'D' -> {
+                //Double
+                val offset = 7
+                var substring = source.substring(index, index + offset)
+                if (substring == "Double ")
+                    return Pair(offset, DonkToken(substring.trim(), TokenType.TYPE_DOUBLE))
+            }
+            'B' -> {
+                //Boolean
+                val offset = 8
+                var substring = source.substring(index, index + offset)
+                if (substring == "Boolean ")
+                    return Pair(offset, DonkToken(substring.trim(), TokenType.TYPE_BOOLEAN))
+            }
         }
 
         var counter = 0
@@ -311,7 +334,7 @@ class DonkHandWrittenScanner() : IScanner {
         //Remove trailing decimal
         if (builder.last() == '.') builder.deleteCharAt(builder.lastIndex)
 
-        return Pair(counter, DonkToken(builder.toString(), TokenType.NUMBER, builder.toString().toDouble()))
+        return Pair(counter, DonkToken(builder.toString(), TokenType.LITERAL_NUMBER, builder.toString().toDouble()))
     }
 
     private fun matchString(index: Int, source: String): Pair<Int, DonkToken> {
@@ -332,7 +355,7 @@ class DonkHandWrittenScanner() : IScanner {
                 }
         }
 
-        return Pair(counter, DonkToken(builder.toString(), TokenType.STRING, builder.toString()))
+        return Pair(counter, DonkToken(builder.toString(), TokenType.LITERAL_STRING, builder.toString()))
     }
 
     private fun matchSlash(index: Int, source: String): Pair<Int, DonkToken> {
@@ -375,11 +398,6 @@ class DonkHandWrittenScanner() : IScanner {
                     TokenType.ERROR,
                     "Unable to scan compound token $first$second"
                 )
-
-
         }
     }
-
-    internal fun Int.isAtEnd(length: Int): Boolean = (this >= length)
-
 }
