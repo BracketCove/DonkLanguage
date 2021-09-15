@@ -1,14 +1,15 @@
 package com.wiseassblog.donk.parser
 
 import com.wiseassblog.donk.DonkToken
+import com.wiseassblog.donk.TokenType
 
 abstract class BaseExpr {
-    abstract fun <T> accept(visitor: ExprVisitor<T>) : T
+    abstract fun <T> accept(visitor: ExprVisitor<T>): T
 }
 
 class ErrorExpr(
     val errors: List<ParserException>
-): BaseExpr() {
+) : BaseExpr() {
     override fun <T> accept(visitor: ExprVisitor<T>): T =
         visitor.visitErrorExpr(this)
 }
@@ -90,9 +91,19 @@ data class CallExpr(
 }
 
 data class FunctionExpr(
-    val parameters: List<DonkToken>,
+    val parameters: List<ParamExpr>,
     val body: List<BaseStmt>
 ) : BaseExpr() {
     override fun <T> accept(visitor: ExprVisitor<T>): T =
         visitor.visitFunctionExpr(this)
+}
+
+data class ParamExpr(
+    val identifier: DonkToken,
+    val type: TokenType
+) : BaseExpr() {
+    override fun <T> accept(visitor: ExprVisitor<T>): T =
+        visitor.visitParamExpr(this)
+
+
 }

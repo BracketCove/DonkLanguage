@@ -1,6 +1,7 @@
 package com.wiseassblog.donk.parser
 
 import com.wiseassblog.donk.DonkToken
+import com.wiseassblog.donk.TokenType
 
 abstract class BaseStmt() {
     abstract fun <T> accept(visitor: StmtVisitor<T>) : T
@@ -70,6 +71,7 @@ data class WhileStmt(
 
 data class FunctionStmt(
     val identifier: DonkToken,
+    val returnType: ReturnType,
     val body: FunctionExpr
 ) : BaseStmt() {
     override fun <T> accept(visitor: StmtVisitor<T>): T =
@@ -83,4 +85,13 @@ data class ReturnStmt(
     override fun <T> accept(visitor: StmtVisitor<T>): T =
         visitor.visitReturnStmt(this)
 }
+
+data class ParameterListStmt(
+    val params: List<ParamExpr>
+) : BaseStmt() {
+    override fun <T> accept(visitor: StmtVisitor<T>): T =
+        visitor.visitParameterListStmt(this)
+}
+
+
 

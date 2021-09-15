@@ -27,10 +27,16 @@ VariableDeclaration -> "var" IDENTIFIER ":"
                     NUMBER 
                     ";"                              
 
-FunctionDeclaration -> "instr" IDENTIFIER "(" \[parameter-list\] ")" \[: TYPE_DOUBLE, TYPE_STRING, TYPE_BOOLEAN\]
- "{" BlockStatement "}" ;
+FunctionDeclaration -> "instr" IDENTIFIER "(" Parameter* ")" ReturnDeclaration BlockStatement ;
+ 
+Parameter ->  (IDENTIFIER 
+                  (String | Double | Boolean) 
+                  \[,\]? 
+              )*
+              ;
+                  
+ReturnDeclaration -> \[: TYPE_DOUBLE, TYPE_STRING, TYPE_BOOLEAN\]                  
                                     
-
 Statement -> 
             BlockStatement |
             ExpressionStatement |
@@ -42,7 +48,7 @@ Statement ->
             VarStatement |
             ValStatement ;
             
-BlockStatement -> Statement* ;
+BlockStatement -> "{" Statement* "}" ;
                     
 ExpressionStatement -> Expression ";" ;
 

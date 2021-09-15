@@ -11,4 +11,5 @@ interface StmtVisitor<T> {
     fun visitReturnStmt(stmt: ReturnStmt): T
     fun visitVoidStmt(stmt: VoidStmt): T
     fun visitErrorStmt(stmt: ErrorStmt): T
+    fun visitParameterListStmt(stmt: ParameterListStmt): T
 }

@@ -4,6 +4,17 @@ import com.wiseassblog.donk.DonkToken
 import com.wiseassblog.donk.TokenType
 import com.wiseassblog.donk.common.isAtEnd
 
+
+/**
+ * Two main kinds of functions:
+ * 1. Parse functions. These are recursive parsing functions which attempt to build semantic elements of the language.
+ * 2. Match functions. These simply check if a given Token's Type matches any of a variable number of other Types. This
+ * cleans up the code and helps to reduce the number of control statements necessary to make comparisons. They return
+ * a boolean which indicates if a match was found.
+ *
+ * Caller increments by 1, not callee
+ *
+ */
 class HandWrittenDonkParser() : IParser {
     override fun parse(tokens: List<DonkToken>): ParserResult {
         var current = 0
@@ -47,7 +58,7 @@ class HandWrittenDonkParser() : IParser {
         val token = tokens[current]
         when (token.type) {
             TokenType.INSTR -> {
-                val parseFunDec: Pair<BaseStmt, Int> = functionDeclaration(current, tokens)
+                val parseFunDec: Pair<BaseStmt, Int> = parseFunctionDeclaration(current + 1, tokens)
                 return Pair(parseFunDec.first, current + parseFunDec.second)
             }
 
@@ -64,107 +75,232 @@ class HandWrittenDonkParser() : IParser {
     }
 
     /**
-     * Function Declaration -> "instr" IDENTIFIER "(" [ParameterList*] ")"
-     *      "{" [Statements*]  \[ReturnStatement\] "}" ;
+     * Function Declaration -> "instr" IDENTIFIER  ParameterList [ReturnType]
+     *      BlockStatement ";"
      *
-     * Note assume first token is INSTR
+     * Note:
+     * - Pair<Boolean if match occurs, new index value>.
+     * - For for non-recursive matches, I just increment the index by 1
      */
-    private fun functionDeclaration(
+    private fun parseFunctionDeclaration(
         current: Int,
         tokens: List<DonkToken>
     ): Pair<BaseStmt, Int> {
-        val ID_POS = current + 1
-        val L_PAREN_POS = current + 2
+        var index = current
 
-        if (tokens[ID_POS].type != TokenType.IDENTIFIER) return Pair<BaseStmt, Int>(
-            ErrorStmt(
-                listOf(ParserException("Expected IDENTIFIER at $ID_POS, instead got ${tokens[ID_POS].type}"))
-            ),
-            ID_POS
+        val instrName: DonkToken
+        val parameterList = mutableListOf<ParamExpr>()
+        var returnType: ReturnType
+        val stmtList = mutableListOf<BaseStmt>()
+
+        val matchInstr = matchTypes(tokens[index], TokenType.IDENTIFIER)
+        if (matchInstr) {
+            instrName = tokens[index]
+            index++
+        } else return getErrorPair(
+            "Expected IDENTIFIER at $index, instead got ${tokens[index].type}",
+            current
         )
 
-        if (tokens[L_PAREN_POS].type != TokenType.LEFT_PAREN) return Pair<BaseStmt, Int>(
-            ErrorStmt(
-                listOf(ParserException("Expected LEFT_PAREN at $L_PAREN_POS, instead got ${tokens[L_PAREN_POS].type}"))
-            ),
-            L_PAREN_POS
+        val parseParams = parseParameterList(
+            index,
+            tokens
         )
 
-        //either R_PAREN or Param List
-        val THIRD_POS = current + 3
-        val params = mutableListOf<DonkToken>()
-        val hasParams: Boolean
-
-        when (tokens[THIRD_POS].type) {
-            TokenType.RIGHT_PAREN -> hasParams = false
-            TokenType.IDENTIFIER -> {
-                //TODO: include commas in params list then filter them out to have correct index
-                hasParams = true
-            }
-            else -> {
-                hasParams = false
-                Pair(
-                    listOf(
-                        ParserException(
-                            "Expected RIGHT_PAREN or IDENTIFIER at $THIRD_POS, " +
-                                    "instead got ${tokens[THIRD_POS].type}"
-                        )
-                    ),
-                    THIRD_POS
-                )
-            }
-
-        }
-
-        val L_BRACE_POS: Int
-        if (hasParams) {
-            //expect R_PAREN the L_BRACE
-            L_BRACE_POS = current + params.size
-        } else {
-            //expect left brace next
-            L_BRACE_POS = current + 4
-        }
-
-        val blockStmt: BlockStmt
-        val BLOCK_POS = current + 5
-
-        if (tokens[L_BRACE_POS].type != TokenType.LEFT_BRACE) return Pair(
-            ErrorStmt(
-                listOf(
-                    ParserException("Expected LEFT_BRACE at $L_BRACE_POS, instead got ${tokens[L_BRACE_POS].type}")
-                )
-            ),
-            L_BRACE_POS
-        ) else {
-            //parse block
-            val parseBlockStmt: Pair<BaseStmt, Int> = parseBlock(
-                BLOCK_POS,
-                tokens
+        if (parseParams.first is ErrorStmt) return parseParams.toErrorPair
+        else {
+            parameterList.addAll(
+                (parseParams.first as ParameterListStmt).params
             )
 
-            when (parseBlockStmt.first) {
-                is BlockStmt -> return Pair(
-                    FunctionStmt(
-                        tokens[ID_POS],
-                        FunctionExpr(
-                            params,
-                            (parseBlockStmt.first as BlockStmt).statements
-                        )
-                    ),
-                    //6 comes from INSTR IDENTIFIER "(" ")" "{" "}"
-                    current + 6 + params.size + parseBlockStmt.second
-                )
+            index = parseParams.second + 1
+        }
 
-                else -> return Pair(
-                    ErrorStmt(
-                        listOf(
-                            ParserException("Expected BLOCK STATEMENT at $BLOCK_POS, instead got ${tokens[BLOCK_POS].type}")
-                        )
-                    ),
-                    current + 6 + params.size + parseBlockStmt.second
+        //first is return type, second is boolean indicating success/failure
+        val parseReturn = parseReturnType(
+            index,
+            tokens
+        )
+
+        if (parseReturn.second) {
+            returnType = parseReturn.first
+            if (parseReturn.first != ReturnType.NONE) index += 2 //eat the colon and RETURN_TYPE
+        } else {
+            return getErrorPair(
+                "expected COLON and then " +
+                        "TYPE_STRING or TYPE_BOOLEAN or TYPE_DOUBLE " +
+                        "at $index but got ${tokens[index].type}",
+                index
+            )
+        }
+
+
+        val parseStmtB = parseBlock(index, tokens)
+
+        if (parseStmtB.first is ErrorStmt) return parseStmtB.toErrorPair
+        else {
+            stmtList.addAll((parseStmtB.first as BlockStmt).statements)
+            index = parseStmtB.second
+        }
+
+        return Pair(
+            FunctionStmt(
+                instrName,
+                returnType,
+                FunctionExpr(
+                    parameterList,
+                    stmtList
+                )
+            ),
+            index++
+        )
+    }
+
+    /**
+     * The boolean in the Pair indicates if an unexpected Token was found (i.e. not a COLON or a LEFT_BRACE)
+     */
+    private fun parseReturnType(current: Int, tokens: List<DonkToken>): Pair<ReturnType, Boolean> {
+        var index = current
+
+        when (tokens[index].type) {
+            TokenType.COLON -> index++
+            TokenType.LEFT_BRACE -> {
+                return Pair(
+                    ReturnType.NONE,
+                    true
                 )
             }
+            else -> return Pair(
+                ReturnType.NONE,
+                false
+            )
         }
+
+        if (
+            matchTypes(
+                tokens[index],
+                *arrayOf(
+                    TokenType.TYPE_STRING,
+                    TokenType.TYPE_BOOLEAN,
+                    TokenType.TYPE_DOUBLE
+                )
+            )
+        ) return Pair(tokens[index].type.toReturnType, true)
+        else return Pair(
+            ReturnType.NONE,
+            false
+        )
+    }
+
+
+    /**
+     * "(" \[ParamExpr*\] ")"
+     */
+    private fun parseParameterList(current: Int, tokens: List<DonkToken>): Pair<BaseStmt, Int> {
+        var index = current
+        val params = mutableListOf<ParamExpr>()
+
+        val matchParenL = matchTypes(tokens[index], TokenType.LEFT_PAREN)
+
+        if (matchParenL) index++
+        else return getErrorPair(
+            "Expected LEFT_PAREN at $current, instead got ${tokens[index].type}",
+            index
+        )
+
+        val matchParenR = matchTypes(tokens[index], TokenType.RIGHT_PAREN)
+
+        if (matchParenR) return Pair(
+            ParameterListStmt(
+                emptyList()
+            ),
+            index
+        )
+
+        while (tokens[index].type != TokenType.RIGHT_PAREN) {
+            if (index >= tokens.size) return getErrorPair("Expected Right Paren but reached EOF", index)
+            if (matchTypes(tokens[index], TokenType.COMMA)) {
+                index++
+                continue
+            }
+
+            val parseParam = parseParamExpr(index, tokens)
+
+            //TODO fix this UGLY CRAP with error lists
+            if (parseParam.first is ErrorExpr) return getErrorPair(
+                (parseParam.first as ErrorExpr).errors.first().message!!,
+                parseParam.second
+            ) else {
+                params.add(parseParam.first as ParamExpr)
+                index = parseParam.second + 1
+            }
+        }
+
+        return Pair(
+            ParameterListStmt(
+                params
+            ),
+            index
+        )
+    }
+
+    /**
+     * IDENTIFIER ":" TYPE
+     */
+    private fun parseParamExpr(
+        current: Int,
+        tokens: List<DonkToken>
+    ): Pair<BaseExpr, Int> {
+        var index = current
+        val id: DonkToken
+        val type: TokenType
+
+        if (matchTypes(tokens[index], TokenType.IDENTIFIER)) {
+            id = tokens[index]
+            index++
+        } else return Pair(
+            ErrorExpr(
+                listOf(
+                    ParserException("Expected IDENTIFIER at $index but got ${tokens[index].type}")
+                )
+            ),
+            index
+        )
+
+        if (matchTypes(tokens[index], TokenType.COLON)) {
+            index++
+        } else return Pair(
+            ErrorExpr(
+                listOf(
+                    ParserException("Expected COLON at $index but got ${tokens[index].type}")
+                )
+            ),
+            index
+        )
+
+        if (matchTypes(
+                tokens[index],
+                *arrayOf(TokenType.TYPE_STRING, TokenType.TYPE_DOUBLE, TokenType.TYPE_BOOLEAN)
+            )
+        ) {
+            type = tokens[index].type
+            return Pair(
+                ParamExpr(
+                    id,
+                    type
+                ),
+                index
+            )
+        } else return Pair(
+            ErrorExpr(
+                listOf(
+                    ParserException("Expected COLON at $index but got ${tokens[index].type}")
+                )
+            ),
+            index
+        )
+
+
     }
 
     private fun valOrVarDeclaration(
@@ -268,22 +404,76 @@ class HandWrittenDonkParser() : IParser {
     }
 
     /**
-     * //Assume we are about to parse some series of statements or expressions
+     * Parses a series of statements until the right brace is found
      */
     private fun parseBlock(current: Int, tokens: List<DonkToken>): Pair<BaseStmt, Int> {
-        return parseDeclaration(current, tokens)
+        val statements = mutableListOf<BaseStmt>()
+        var loop = true
+        var index = current
+
+        val matchBraceL = matchTypes(tokens[index], TokenType.LEFT_BRACE)
+
+        if (matchBraceL) index++
+        else return getErrorPair(
+            "Expected LEFT_BRACE at $current, instead got ${tokens[current].type}",
+            index
+        )
+
+        while (
+            loop &&
+            (index <= tokens.lastIndex)
+        ) {
+            if (matchTypes(tokens[index], TokenType.RIGHT_BRACE)) return Pair(
+                BlockStmt(
+                    statements
+                ),
+                index
+            )
+
+            val parseResult = parseDeclaration(
+                index,
+                tokens
+            )
+
+            when (parseResult.first) {
+                is ErrorStmt -> return Pair(
+                    parseResult.first,
+                    parseResult.second
+                )
+
+                is ExprStmt -> {
+                    statements.add(
+                        parseResult.first
+                    )
+
+                    index = parseResult.second
+                }
+            }
+        }
+
+        return Pair(
+            BlockStmt(
+                statements
+            ),
+            index
+        )
     }
 
     internal fun parseStatement(
         current: Int,
         tokens: List<DonkToken>
     ): Pair<BaseStmt, Int> {
-
-        while ()
         when (tokens[current].type) {
-            TokenType.LITERAL_STRING -> return Pair(
-                LiteralExpr
-            )
+            TokenType.LITERAL_STRING -> {
+                if (tokens[current + 1].type == TokenType.SEMICOLON) Pair(
+                    ExprStmt(
+                        LiteralExpr(
+                            tokens[current]
+                        )
+                    ),
+                    current + 2
+                )
+            }
         }
 
         val parseExpressionResult = parseExpression(current, tokens)
@@ -300,11 +490,14 @@ class HandWrittenDonkParser() : IParser {
         tokens: List<DonkToken>
     ): Pair<BaseStmt, Int> {
         var expr: BaseStmt
-
+        var index = current
         //expect expr
-        when (tokens[current].type) {
+        when (tokens[index].type) {
             TokenType.LITERAL_STRING,
-            TokenType.LITERAL_NUMBER -> expr = ExprStmt(LiteralExpr(tokens[current]))
+            TokenType.LITERAL_NUMBER -> {
+                expr = ExprStmt(LiteralExpr(tokens[current]))
+                index++
+            }
             else -> expr = ErrorStmt(
                 listOf(
                     ParserException(
@@ -315,68 +508,17 @@ class HandWrittenDonkParser() : IParser {
         }
 
         //Expect semicolon
-        if (tokens[current + 1].type != TokenType.SEMICOLON) expr = ErrorStmt(
+        if (tokens[index].type != TokenType.SEMICOLON) expr = ErrorStmt(
             listOf(
                 ParserException(
-                    "Expected SEMICOLON but recieved ${tokens[current + 1].type}"
+                    "Expected SEMICOLON but recieved ${tokens[index].type}"
                 )
             )
         )
 
         return Pair(
             expr,
-            2
+            index
         )
-    }
-
-
-    /**
-     * Identifier,
-     * Operator,
-     * Identifier
-     */
-//    private fun matchBinaryExpression(
-//        current: Int,
-//        token: DonkToken,
-//        tokens: List<DonkToken>
-//    ): Pair<BaseExpr, Int> {
-//        when (token.type) {
-//            //TODO decide how to handle index out of bounds
-//            TokenType.IDENTIFIER -> {
-//                if (tokens[current + 1].isOperator() && tokens[current + 2].type == TokenType.IDENTIFIER) {
-//                    return Pair(
-//                        BinaryExpr(
-//                            VariableExpr(tokens[current]),
-//                            tokens[current + 1],
-//                            VariableExpr(tokens[current + 2])
-//                        ),
-//                        3
-//                    )
-//                }
-//            }
-//        }
-//
-//        return Pair(
-//            ErrorExpr(
-//                ParserException(
-//                    "Unable to parse binary expression"
-//                )
-//            ),
-//            1
-//        )
-//    }
-
-    private fun DonkToken.isOperator() = when (this.type) {
-        TokenType.PLUS,
-        TokenType.MINUS,
-        TokenType.SLASH,
-        TokenType.ASTERISK,
-        TokenType.EQUAL_EQUAL,
-        TokenType.EXCLM_EQUAL,
-        TokenType.LESS,
-        TokenType.LESS_EQUAL,
-        TokenType.GREATER,
-        TokenType.GREATER_EQUAL -> true
-        else -> false
     }
 }

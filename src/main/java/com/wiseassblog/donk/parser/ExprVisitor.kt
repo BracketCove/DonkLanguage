@@ -8,6 +8,7 @@ interface ExprVisitor<T> {
     fun visitVariableExpr(expr: VariableExpr): T
     fun visitValueExpr(expr: ValueExpr): T
     fun visitAssignExpr(expr: AssignExpr): T
+    fun visitParamExpr(expr: ParamExpr): T
     fun visitLogicalExpr(expr: LogicalExpr): T
     fun visitCallExpr(expr: CallExpr): T
     fun visitFunctionExpr(expr: FunctionExpr): T

@@ -6,11 +6,10 @@ Donk is largely based on the Kotlin programming language.
 true
 false
 
-###Number:
+###Double:
 
-1337 //Integer
 
-13.37 //Decimal, May be +/-
+13.37 //Double, May be +/-
 
 ###String:
 
@@ -115,7 +114,7 @@ someFunction(arg1, arg2);
 ###Function Definition:
 Functions are refered to as Instructions for human legibility.
 
-instr someFunction(param1: Type, param2: Type) {
+instr someFunction(param1: Type, param2: Type): ReturnType {
 
     //block statement
 }
