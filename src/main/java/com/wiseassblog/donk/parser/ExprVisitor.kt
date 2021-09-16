@@ -4,6 +4,7 @@ interface ExprVisitor<T> {
     fun visitBinaryExpr(expr: BinaryExpr): T
     fun visitGroupingExpr(expr: GroupingExpr): T
     fun visitLiteralExpr(expr: LiteralExpr): T
+    fun visitBooleanExpr(expr: BooleanExpr): T
     fun visitUnaryExpr(expr: UnaryExpr): T
     fun visitVariableExpr(expr: VariableExpr): T
     fun visitValueExpr(expr: ValueExpr): T

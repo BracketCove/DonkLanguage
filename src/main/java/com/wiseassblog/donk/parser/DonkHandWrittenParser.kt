@@ -74,6 +74,37 @@ class HandWrittenDonkParser() : IParser {
         )
     }
 
+    internal fun parseStatement(
+        current: Int,
+        tokens: List<DonkToken>
+    ): Pair<BaseStmt, Int> {
+        var index = current
+        when (tokens[index].type) {
+            TokenType.RETURN -> {
+                index++
+                val parseReturn = parseReturnStmt(index, tokens)
+
+                return Pair(
+                    parseReturn.first,
+                    parseReturn.second + 1
+                )
+            }
+
+            TokenType.WHILE -> {
+                index++
+                val parseWhile = parseWhileStmt(index, tokens)
+
+                return Pair(
+                    parseWhile.first,
+                    parseWhile.second + 1
+                )
+            }
+        }
+
+        val parseExpressionResult = parseExpression(current, tokens)
+        return Pair<BaseStmt, Int>(parseExpressionResult.first, current + parseExpressionResult.second)
+    }
+
     /**
      * Function Declaration -> "instr" IDENTIFIER  ParameterList [ReturnType]
      *      BlockStatement ";"
@@ -441,13 +472,13 @@ class HandWrittenDonkParser() : IParser {
                     parseResult.second
                 )
 
-                is ExprStmt -> {
-                    statements.add(
-                        parseResult.first
-                    )
+               else -> {
+                   statements.add(
+                       parseResult.first
+                   )
 
-                    index = parseResult.second
-                }
+                   index = parseResult.second + 1
+               }
             }
         }
 
@@ -459,25 +490,80 @@ class HandWrittenDonkParser() : IParser {
         )
     }
 
-    internal fun parseStatement(
-        current: Int,
-        tokens: List<DonkToken>
-    ): Pair<BaseStmt, Int> {
-        when (tokens[current].type) {
-            TokenType.LITERAL_STRING -> {
-                if (tokens[current + 1].type == TokenType.SEMICOLON) Pair(
-                    ExprStmt(
-                        LiteralExpr(
-                            tokens[current]
-                        )
-                    ),
-                    current + 2
-                )
-            }
+
+
+    /**
+     * RETURN Expression ";"
+     *
+     * assume RETURN has been matched
+     */
+    private fun parseReturnStmt(current: Int, tokens: List<DonkToken>) : Pair<BaseStmt, Int> {
+        var index = current
+        val expr: BaseExpr
+
+        val parseExpr = parseExpression(index, tokens)
+
+        if (parseExpr.first is ErrorStmt) return Pair(
+            parseExpr.first,
+            parseExpr.second + 1
+        ) else {
+            expr = (parseExpr.first as ExprStmt).expr
+            index = parseExpr.second + 1
         }
 
-        val parseExpressionResult = parseExpression(current, tokens)
-        return Pair<BaseStmt, Int>(parseExpressionResult.first, current + parseExpressionResult.second)
+        if (matchTypes(tokens[index], TokenType.SEMICOLON)) return Pair(
+            ReturnStmt(expr),
+            index
+        ) else return getErrorPair(
+            "Expected SEMICOLON at $index but instead got ${tokens[index].type}",
+            index
+        )
+    }
+
+    fun parseWhileStmt(current: Int, tokens: List<DonkToken>) : Pair<BaseStmt, Int> {
+        var index = current
+        val conditionExpr: BaseExpr
+        val block: BlockStmt
+
+        if (matchTypes(tokens[index], TokenType.LEFT_PAREN)) index++
+        else getErrorPair(
+        "Expected LEFT_PAREN at $index but got ${tokens[index].type}",
+        index
+        )
+
+        val parseConditionExpr = parseExpression(index, tokens)
+
+        if (parseConditionExpr.first is ErrorStmt) return Pair(
+            parseConditionExpr.first,
+            parseConditionExpr.second
+        ) else {
+            conditionExpr = (parseConditionExpr.first as ExprStmt).expr
+            index = parseConditionExpr.second + 1
+        }
+
+        if (matchTypes(tokens[index], TokenType.RIGHT_PAREN)) index++
+        else getErrorPair(
+            "Expected RIGHT_PAREN at $index but got ${tokens[index].type}",
+            index
+        )
+
+        val parseBlock = parseBlock(index, tokens)
+
+        if (parseBlock.first is ErrorStmt) return Pair(
+            parseBlock.first,
+            parseBlock.second
+        ) else {
+            block = (parseBlock.first as BlockStmt)
+            index = parseBlock.second
+        }
+
+        return Pair(
+            WhileStmt(
+                conditionExpr,
+                block
+            ),
+            index
+        )
     }
 
     /**
@@ -496,25 +582,18 @@ class HandWrittenDonkParser() : IParser {
             TokenType.LITERAL_STRING,
             TokenType.LITERAL_NUMBER -> {
                 expr = ExprStmt(LiteralExpr(tokens[current]))
-                index++
+            }
+            TokenType.TRUE, TokenType.FALSE -> {
+                expr = ExprStmt(BooleanExpr(tokens[current]))
             }
             else -> expr = ErrorStmt(
                 listOf(
                     ParserException(
-                        "Expected Expr but recieved ${tokens[current].type}"
+                        "Expected Expr but recieved ${tokens[index].type}"
                     )
                 )
             )
         }
-
-        //Expect semicolon
-        if (tokens[index].type != TokenType.SEMICOLON) expr = ErrorStmt(
-            listOf(
-                ParserException(
-                    "Expected SEMICOLON but recieved ${tokens[index].type}"
-                )
-            )
-        )
 
         return Pair(
             expr,

@@ -6,6 +6,9 @@ package com.wiseassblog.donk
  * Source code (String) ->  List<Tokens>            -> Abstract Syntax Tree (AST)
  *
  *
+ * Sealed classes are used to represent a set of restricted Types
+ * enums are a set of restricted values
+ *
  */
 enum class TokenType {
     //Single tokens

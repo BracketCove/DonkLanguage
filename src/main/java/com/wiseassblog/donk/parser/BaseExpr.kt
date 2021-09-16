@@ -34,6 +34,13 @@ data class LiteralExpr(
         visitor.visitLiteralExpr(this)
 }
 
+data class BooleanExpr(
+    val boolean: DonkToken
+) : BaseExpr() {
+    override fun <T> accept(visitor: ExprVisitor<T>): T =
+        visitor.visitBooleanExpr(this)
+}
+
 data class BinaryExpr(
     val left: BaseExpr,
     val operator: DonkToken,

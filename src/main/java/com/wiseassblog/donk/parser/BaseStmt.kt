@@ -79,7 +79,6 @@ data class FunctionStmt(
 }
 
 data class ReturnStmt(
-    val keyword: DonkToken,
     val value: BaseExpr
 ) : BaseStmt() {
     override fun <T> accept(visitor: StmtVisitor<T>): T =
