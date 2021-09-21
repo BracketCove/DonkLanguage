@@ -7,7 +7,7 @@ interface IParser {
 }
 
 sealed class ParserResult {
-    data class Success(val tokens: List<BaseStmt>) : ParserResult()
+    data class Success(val statements: List<BaseStmt>) : ParserResult()
 
     //Why as list? To catch multiple syntax errors in scanned source at once, instead of one by one.
     data class Error(val exception: List<ParserException>) : ParserResult()

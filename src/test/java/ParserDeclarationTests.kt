@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class ParserDeclarationTests {
 
-    val parser = HandWrittenDonkParser()
+    val parser = DonkHandWrittenDonkParser()
 
     /**
      * FunctionStmt -> instr LITERAL FunctionExpr
@@ -73,7 +73,7 @@ class ParserDeclarationTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 
@@ -146,7 +146,7 @@ class ParserDeclarationTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 
@@ -278,7 +278,7 @@ class ParserDeclarationTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 
@@ -296,7 +296,7 @@ class ParserDeclarationTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 
@@ -314,7 +314,7 @@ class ParserDeclarationTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 }

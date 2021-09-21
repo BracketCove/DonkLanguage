@@ -47,6 +47,15 @@ internal fun matchTypes(token: DonkToken, vararg comparisons: TokenType): Boolea
     return false
 }
 
+internal fun DonkToken.getPrecedence() : Precedence = when (this.type) {
+    TokenType.PLUS,
+    TokenType.MINUS -> Precedence.LOW
+    TokenType.SLASH,
+    TokenType.ASTERISK -> Precedence.MEDIUM
+
+    else -> Precedence.LOW
+}
+
 internal fun DonkToken.isOperator() = when (this.type) {
     TokenType.PLUS,
     TokenType.MINUS,

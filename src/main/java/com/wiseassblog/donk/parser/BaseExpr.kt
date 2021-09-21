@@ -44,7 +44,8 @@ data class BooleanExpr(
 data class BinaryExpr(
     val left: BaseExpr,
     val operator: DonkToken,
-    val right: BaseExpr
+    val right: BaseExpr,
+    val precedence: Precedence
 ) : BaseExpr() {
     override fun <T> accept(visitor: ExprVisitor<T>): T =
         visitor.visitBinaryExpr(this)
@@ -89,8 +90,7 @@ data class LogicalExpr(
 }
 
 data class CallExpr(
-    val function: BaseExpr,
-    val parenthesis: DonkToken,
+    val functionId: DonkToken,
     val arguments: List<BaseExpr>
 ) : BaseExpr() {
     override fun <T> accept(visitor: ExprVisitor<T>): T =

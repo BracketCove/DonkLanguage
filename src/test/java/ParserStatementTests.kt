@@ -5,7 +5,7 @@ import org.junit.jupiter.api.Test
 
 class ParserStatementTests {
 
-    val parser = HandWrittenDonkParser()
+    val parser = DonkHandWrittenDonkParser()
 
     /**
      * 1. Set up the test arguments
@@ -86,33 +86,14 @@ class ParserStatementTests {
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
     }
 
     @Test
     fun parseWhileStmt() {
         val testOne = listOf<DonkToken>(
-            DonkToken(
-                "instr",
-                TokenType.INSTR
-            ),
-            DonkToken(
-                "stub",
-                TokenType.IDENTIFIER
-            ),
-            DonkToken(
-                "(",
-                TokenType.LEFT_PAREN
-            ),
-            DonkToken(
-                ")",
-                TokenType.RIGHT_PAREN
-            ),
-            DonkToken(
-                "{",
-                TokenType.LEFT_BRACE
-            ),
+
             DonkToken(
                 "while",
                 TokenType.WHILE
@@ -144,21 +125,12 @@ class ParserStatementTests {
             DonkToken(
                 "}",
                 TokenType.RIGHT_BRACE
-            ),
-            DonkToken(
-                "}",
-                TokenType.RIGHT_BRACE
             )
         )
 
         val result = parser.parse(testOne)
 
-        val expectedResult = FunctionStmt(
-            testOne[1],
-            ReturnType.NONE,
-            FunctionExpr(
-                emptyList(),
-                listOf(
+        val expectedResult =
                     WhileStmt(
                         BooleanExpr(
                             DonkToken(
@@ -179,14 +151,152 @@ class ParserStatementTests {
                             )
                         )
                     )
-                )
-            )
-        )
+
 
         assert(
             result is ParserResult.Success &&
-                    result.tokens.contains(expectedResult)
+                    result.statements.contains(expectedResult)
         )
+    }
+
+    /**
+     * Note: For some reason anytime I tried to use the contains assertion, it returned false. Turns out that for some
+     * reason two different VoidStmt() objects are never equal.
+     */
+    @Test
+    fun parseIfStmt() {
+
+        val testOne = listOf<DonkToken>(
+            DonkToken(
+                "if",
+                TokenType.IF
+            ),
+            DonkToken(
+                "(",
+                TokenType.LEFT_PAREN
+            ),
+            DonkToken(
+                "true",
+                TokenType.TRUE
+            ),
+            DonkToken(
+                ")",
+                TokenType.RIGHT_PAREN
+            ),
+            DonkToken(
+                "{",
+                TokenType.LEFT_BRACE
+            ),
+            DonkToken(
+                "}",
+                TokenType.RIGHT_BRACE
+            )
+        )
+
+        val result = parser.parse(testOne)
+
+        if (result is ParserResult.Success) {
+
+            assert(
+                result.statements.first() is IfStmt
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).condition == BooleanExpr(
+                    DonkToken(
+                        "true",
+                        TokenType.TRUE
+                    )
+                )
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).ifTrue == BlockStmt(
+                    emptyList()
+                )
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).ifFalse is VoidStmt
+            )
+
+        } else assert(false)
+
+    }
+
+    @Test
+    fun parseIfElseStmt() {
+
+        val testOne = listOf<DonkToken>(
+            DonkToken(
+                "if",
+                TokenType.IF
+            ),
+            DonkToken(
+                "(",
+                TokenType.LEFT_PAREN
+            ),
+            DonkToken(
+                "true",
+                TokenType.TRUE
+            ),
+            DonkToken(
+                ")",
+                TokenType.RIGHT_PAREN
+            ),
+            DonkToken(
+                "{",
+                TokenType.LEFT_BRACE
+            ),
+            DonkToken(
+                "}",
+                TokenType.RIGHT_BRACE
+            ),
+            DonkToken(
+                "else",
+                TokenType.ELSE
+            ),
+            DonkToken(
+                "{",
+                TokenType.LEFT_BRACE
+            ),
+            DonkToken(
+                "}",
+                TokenType.RIGHT_BRACE
+            )
+        )
+
+        val result = parser.parse(testOne)
+
+        if (result is ParserResult.Success) {
+
+            assert(
+                result.statements.first() is IfStmt
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).condition == BooleanExpr(
+                    DonkToken(
+                        "true",
+                        TokenType.TRUE
+                    )
+                )
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).ifTrue == BlockStmt(
+                    emptyList()
+                )
+            )
+
+            assert(
+                (result.statements.first() as IfStmt).ifFalse == BlockStmt(
+                        emptyList()
+                )
+            )
+
+        } else assert(false)
+
     }
 
 }

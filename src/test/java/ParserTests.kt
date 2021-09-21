@@ -39,11 +39,12 @@ class ParserTests {
                     "b",
                     TokenType.IDENTIFIER
                 )
-            )
+            ),
+            Precedence.LOW
         )
 
 
-    val parser = HandWrittenDonkParser()
+    val parser = DonkHandWrittenDonkParser()
 
     @Test
     fun parseBinaryExpression() {
